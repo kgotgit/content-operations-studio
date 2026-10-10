@@ -31,3 +31,7 @@ yarn-error.log*
 # OS / Editor
 .DS_Store
 .vscode/
+
+.next
+.vercel
+.turbo
