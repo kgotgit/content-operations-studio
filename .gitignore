@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Caches
+.cache/
+.turbo/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Sanity local artifacts
+.sanity/
+
+# TypeScript
+*.tsbuildinfo
+
+# OS / Editor
+.DS_Store
+.vscode/
