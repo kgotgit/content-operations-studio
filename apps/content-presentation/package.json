@@ -1,0 +1,36 @@
+{
+  "name": "content-presentation",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/build-remote-host.mjs && next dev",
+    "build": "node scripts/build-remote-host.mjs && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "build:remote-host": "node scripts/build-remote-host.mjs",
+    "generate:payload-pages": "node scripts/generate-remote-payload-pages.mjs"
+  },
+  "dependencies": {
+    "@content-ops/navigation-adapters": "workspace:*",
+    "@content-ops/navigation-contract": "workspace:*",
+    "@content-ops/navigation-sanity": "workspace:*",
+    "@content-ops/navigation-ui": "workspace:*",
+    "@vercel/microfrontends": "^2.4.2",
+    "lucide-react": "^0.469.0",
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remote-components": "^0.4.16"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "esbuild": "0.25.6",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
