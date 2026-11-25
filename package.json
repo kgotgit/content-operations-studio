@@ -1,0 +1,14 @@
+{
+  "name": "content-operations-studio",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "seed:nav": "node scripts/seed-navigation.mjs"
+  },
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
