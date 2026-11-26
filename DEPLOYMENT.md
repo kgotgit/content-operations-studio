@@ -93,6 +93,12 @@ The `/drupal-pages/*.html` URLs are `beforeFiles` rewrites in `next.config.ts`, 
 generated during the build and nothing depends on a previous deployment. `public/drupal-pages/`
 is gitignored and should stay empty.
 
+The header is **server-rendered into Declarative Shadow DOM** (`<template shadowrootmode="open">`),
+so its links are real, crawlable HTML in the first response, with no JavaScript required. The
+inlined `<template>` payload is used only for hydration. Pages set `lang`, canonical and hreflang,
+and `DRUPAL_PREVIEW_ROBOTS` controls robots (default: indexable on production only). The
+`/remote/navigation/*` fragments themselves are `noindex, follow`.
+
 By default it fetches payloads from **its own deployment**, so the payload's `/_next/static/*`
 chunk hashes always match. Responses are CDN-cached for 5 minutes (`s-maxage=300`).
 

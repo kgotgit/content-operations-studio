@@ -8,7 +8,8 @@ import {
   renderPage,
   resolveHostForPayloads,
 } from '../../../scripts/remote-host/payload-page.mjs';
-import { getBypassHeaders } from '@/lib/env';
+import { LOCALES } from '@content-ops/navigation-contract';
+import { getBypassHeaders, vercelEnv } from '@/lib/env';
 
 /**
  * Simulated Drupal page, rendered on request (works on Vercel, where the static
@@ -20,6 +21,11 @@ import { getBypassHeaders } from '@/lib/env';
  * The payload is fetched server-side from REMOTE_ORIGIN (default: this deployment, so
  * the payload's chunk hashes always match the assets this deployment serves) and
  * inlined into a <template>. The browser makes no request to /remote/navigation/*.
+ * The same payload is also rendered into Declarative Shadow DOM, so the header is real,
+ * crawlable HTML in the initial response (true SSR), not just inert template content.
+ *
+ * Robots: `DRUPAL_PREVIEW_ROBOTS` overrides; default is "index, follow" on production and
+ * "noindex" on preview/development deployments.
  *
  * The host manifest is read over HTTP at request time (like Drupal would), not imported,
  * so a missing or rebuilding public/remote-host/ yields a 503 instead of a compile error.
@@ -73,8 +79,27 @@ export async function GET(
       )
       .join('\n');
 
+    const origin = request.nextUrl.origin;
+    const robots = env('DRUPAL_PREVIEW_ROBOTS') ?? (vercelEnv === 'production' ? 'index, follow' : 'noindex');
+    const [channel, experience, locale] = single ? single.split('/') : [];
+    const canonical = `${origin}${single ? `${base}/${single}` : base}`;
+    // hreflang alternates: same channel/experience in every supported locale
+    const alternates = single
+      ? [
+          ...LOCALES.map((l) => ({ hreflang: l, href: `${origin}${base}/${channel}/${experience}/${l}` })),
+          { hreflang: 'x-default', href: `${origin}${base}/${channel}/${experience}/en-US` },
+        ]
+      : [];
+
     const html = renderPage({
-      title: single ? `Remote navigation · ${single}` : 'Remote navigation · all flavours',
+      title: single ? `APEX ${experience} navigation (${locale}) · CMS integration preview` : 'APEX navigation · CMS integration preview',
+      description: single
+        ? `Server-rendered APEX ${experience} header navigation for ${locale}, embedded in a legacy CMS page.`
+        : 'Server-rendered APEX header navigation for multiple experiences and locales, embedded in a legacy CMS page.',
+      lang: locale ?? 'en',
+      robots,
+      canonical,
+      alternates,
       manifest,
       host,
       assetOrigin,
@@ -88,7 +113,7 @@ export async function GET(
         'Content-Type': 'text/html; charset=utf-8',
         // Like Drupal's page cache: payloads re-fetched at most every 5 minutes per region
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
-        'X-Robots-Tag': 'noindex',
+        'Content-Language': locale ?? 'en',
       },
     });
   } catch (error) {

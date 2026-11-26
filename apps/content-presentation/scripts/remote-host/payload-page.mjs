@@ -83,24 +83,62 @@ export function extractLinks(html) {
 }
 
 /**
+ * Server-rendered, crawlable snapshot of the header for Declarative Shadow DOM.
+ *
+ * Takes the remote payload (a full Next.js document) and keeps only what should be visible
+ * before any JavaScript runs: stylesheet links (absolutized to the remote origin) plus the
+ * component markup, with every <script> removed so nothing executes in the host page.
+ * The snapshot is marked `data-rc-ssr` so the payload hook can swap it for the hydrated
+ * component without a flash (see payload-hook.js).
+ */
+export function extractSsrMarkup(html, publicOrigin) {
+  const base = `${stripSlash(publicOrigin)}/`;
+  const abs = (href) => {
+    try {
+      return new URL(href.replace(/&amp;/g, '&'), base).href;
+    } catch {
+      return href;
+    }
+  };
+  const links = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*>/gi)]
+    .map((m) => m[0].match(/\bhref="([^"]+)"/i)?.[1])
+    .filter(Boolean)
+    .map((href) => `<link rel="stylesheet" href="${escapeHtml(abs(href))}" data-rc-ssr>`)
+    .join('');
+
+  let body = html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? html;
+  const start = body.search(/<div\b[^>]*\bdata-bundle=/i);
+  if (start >= 0) body = body.slice(start);
+  body = body
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<template\b[\s\S]*?<\/template>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Rename so neither the library nor the hook mistakes the snapshot for the live component
+    .replace(/\sdata-(bundle|route|runtime|type)="/g, ' data-ssr-$1="')
+    .replace(/\sid="([^"]*__ssr)"/g, ' data-ssr-id="$1"');
+
+  if (!body.includes('enterprise-header-navigation')) {
+    throw new Error('Could not extract header markup from the remote payload');
+  }
+  return `${links}<div data-rc-ssr>${body}</div>`;
+}
+
+/**
+ * Embed = hydration payload (inert <template>) + host element whose Declarative Shadow DOM
+ * contains the server-rendered header. Browsers and crawlers parse the DSD as real, styled,
+ * isolated DOM on the first response; the bundled host later hydrates it from the payload.
+ *
  * @param {{ payload: Awaited<ReturnType<typeof fetchPayload>>, publicOrigin: string }} opts
  */
 export function renderEmbed({ payload, publicOrigin }) {
   const { flavour } = payload;
   const id = `rc-payload-${slug(flavour)}`;
   const src = `${stripSlash(publicOrigin)}/remote/navigation/${flavour}`;
-  const links = extractLinks(payload.html);
+  const ssr = extractSsrMarkup(payload.html, publicOrigin);
   return `
-    <!-- Remote navigation: ${escapeHtml(flavour)} (payload inlined server-side, ${payload.bytes} bytes) -->
+    <!-- Remote navigation: ${escapeHtml(flavour)} -->
     <template id="${id}" data-remote-component-payload data-src="${escapeHtml(src)}">${payload.html}</template>
-    <remote-component src="${escapeHtml(src)}" payload="${id}"></remote-component>
-    <noscript>
-      <nav aria-label="Site navigation (${escapeHtml(flavour)})">
-        <ul>
-${links.map((l) => `          <li><a href="${escapeHtml(l.href)}">${escapeHtml(l.text)}</a></li>`).join('\n')}
-        </ul>
-      </nav>
-    </noscript>`;
+    <remote-component src="${escapeHtml(src)}" payload="${id}"><template shadowrootmode="open">${ssr}</template></remote-component>`;
 }
 
 /**
@@ -112,16 +150,42 @@ ${links.map((l) => `          <li><a href="${escapeHtml(l.href)}">${escapeHtml(l
  *   embeds: string,
  *   nav?: string,
  *   generator?: string,
+ *   lang?: string,                 // <html lang>, e.g. "zh-Hant"
+ *   description?: string,
+ *   robots?: string,               // e.g. "index, follow" or "noindex"
+ *   canonical?: string,            // absolute URL
+ *   alternates?: { hreflang: string, href: string }[],
  * }} opts
  */
-export function renderPage({ title, manifest, host, assetOrigin = '', embeds, nav = '', generator = 'payload-page.mjs' }) {
+export function renderPage({
+  title,
+  manifest,
+  host,
+  assetOrigin = '',
+  embeds,
+  nav = '',
+  generator = 'payload-page.mjs',
+  lang = 'en',
+  description = '',
+  robots = 'noindex',
+  canonical = '',
+  alternates = [],
+}) {
   const hostSrc = `${stripSlash(assetOrigin)}/remote-host/${host.file}`;
+  const seo = [
+    `<meta name="robots" content="${escapeHtml(robots)}" />`,
+    description && `<meta name="description" content="${escapeHtml(description)}" />`,
+    canonical && `<link rel="canonical" href="${escapeHtml(canonical)}" />`,
+    ...alternates.map((a) => `<link rel="alternate" hreflang="${escapeHtml(a.hreflang)}" href="${escapeHtml(a.href)}" />`),
+  ]
+    .filter(Boolean)
+    .join('\n  ');
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(lang)}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex" />
+  ${seo}
   <title>${escapeHtml(title)}</title>
   <meta name="generator" content="${escapeHtml(generator)}" />
   <!-- Bundled remote-components HTML host v${escapeHtml(manifest.version)} (${escapeHtml(host.mode)} build) -->
@@ -141,8 +205,9 @@ export function renderPage({ title, manifest, host, assetOrigin = '', embeds, na
 ${embeds}
   <main id="main-content">
     <h1 style="margin-top:0">${escapeHtml(title)}</h1>
-    <p>Each header above was fetched server-side and inlined into a <code>&lt;template&gt;</code>.
-       The bundled host's <code>onRequest</code> hook serves that payload, so the browser makes no request to <code>/remote/navigation/*</code>.</p>
+    <p>Each header above is server-rendered into Declarative Shadow DOM, so it's real, crawlable HTML
+       before any JavaScript runs. The bundled host then hydrates it from an inlined payload via
+       <code>onRequest</code>, so the browser makes no request to <code>/remote/navigation/*</code>.</p>
     <nav class="pages">${nav}</nav>
     <h2 style="font-size:16px">Runtime report</h2>
     <div id="payload-report">waiting for hydration…</div>
@@ -157,7 +222,8 @@ ${embeds}
       const elements = [...document.querySelectorAll('remote-component')].map((el) => ({
         src: el.getAttribute('src'),
         payloadSource: el.getAttribute('data-payload-source') || 'network',
-        hydrated: !!el.shadowRoot?.querySelector('#enterprise-header-navigation'),
+        hydrated: !!el.shadowRoot?.querySelector('[data-bundle] #enterprise-header-navigation'),
+        ssrSnapshotRemaining: el.shadowRoot?.querySelectorAll('div[data-rc-ssr]').length ?? 0,
       }));
       const result = { hostVersion: window.RemoteComponentsHost?.version, servedFromPayload: stats.served.length, networkFallbacks: stats.fetched.length, remoteRouteRequests: remoteCalls, elements };
       window.__PAYLOAD_REPORT__ = result;

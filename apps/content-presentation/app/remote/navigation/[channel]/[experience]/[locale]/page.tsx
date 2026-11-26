@@ -14,6 +14,16 @@ import {
 import { getNavigationData } from '@content-ops/navigation-sanity';
 import { HeaderNavigation } from '@content-ops/navigation-ui';
 import { ExposeRemoteComponent } from 'remote-components/remote/nextjs/app';
+import type { Metadata } from 'next';
+
+/**
+ * These routes are fragments consumed by hosts (Next.js, Drupal), not pages for search.
+ * `follow` keeps link discovery; `noindex` keeps the bare fragment out of results.
+ */
+export const metadata: Metadata = {
+  title: 'Header navigation fragment',
+  robots: { index: false, follow: true },
+};
 
 /**
  * Pre-render all valid combinations of Channel x Experience x Locale at build time

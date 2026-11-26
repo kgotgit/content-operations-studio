@@ -83,6 +83,54 @@ function payloadOnRequest(element) {
   };
 }
 
+/*
+ * Declarative Shadow DOM handoff.
+ *
+ * The consumer may server-render the header into `<template shadowrootmode="open">` (real,
+ * crawlable, styled DOM before any JS). Two things would otherwise go wrong at hydration:
+ *  1. The library calls `attachShadow()`, which on a declarative shadow root removes all
+ *     children: the header would blink out until the hydrated copy is rendered.
+ *  2. Without cleanup, the snapshot and the hydrated component would both be visible.
+ * So for hosts with a `data-rc-ssr` snapshot we return the existing root untouched, and
+ * remove the snapshot in the same microtask the library inserts the live component
+ * (MutationObserver callbacks run before the next paint, so there's no flash or layout shift).
+ */
+const SSR_ATTR = 'data-rc-ssr';
+
+function watchHandoff(root) {
+  if (root.__rcHandoff) return;
+  root.__rcHandoff = true;
+  const observer = new MutationObserver((mutations) => {
+    const arrived = mutations.some((m) =>
+      [...m.addedNodes].some(
+        (n) =>
+          n.nodeType === 1 &&
+          !n.hasAttribute(SSR_ATTR) &&
+          (n.matches('[data-bundle]') || n.querySelector('[data-bundle], #enterprise-header-navigation')),
+      ),
+    );
+    if (!arrived) return;
+    // Keep the snapshot's <link data-rc-ssr> stylesheets: same URLs as the library's, so no FOUC.
+    root.querySelectorAll(`div[${SSR_ATTR}]`).forEach((n) => n.remove());
+    observer.disconnect();
+  });
+  observer.observe(root, { childList: true, subtree: true });
+}
+
+if (typeof Element !== 'undefined' && !Element.prototype.attachShadow.__rcPatched) {
+  const nativeAttachShadow = Element.prototype.attachShadow;
+  const patched = function attachShadow(init) {
+    const existing = this.shadowRoot;
+    if (this.localName === 'remote-component' && existing && existing.querySelector(`[${SSR_ATTR}]`)) {
+      watchHandoff(existing);
+      return existing;
+    }
+    return nativeAttachShadow.call(this, init);
+  };
+  patched.__rcPatched = true;
+  Element.prototype.attachShadow = patched;
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener(
     'beforeload',
