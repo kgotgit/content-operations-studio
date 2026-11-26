@@ -68,7 +68,7 @@ export function SearchDialog() {
 
       <Dialog.Portal container={portalContainer ?? undefined}>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-[12%] sm:top-[16%] z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/10 overflow-hidden focus:outline-none">
+        <Dialog.Content className="fixed inset-x-4 sm:inset-x-0 mx-auto top-[12%] sm:top-[16%] z-50 max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden focus:outline-none">
           <Dialog.Title className="sr-only">Search site</Dialog.Title>
 
           {/* Search Input Row */}

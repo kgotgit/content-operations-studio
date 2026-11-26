@@ -90,7 +90,7 @@ export function HeaderNavigation({
               className="flex items-center gap-2.5 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
               aria-label={`${brandName} Homepage`}
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-900 to-blue-800 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-sm">
                 A
               </div>
               <span className="font-extrabold text-lg tracking-tight text-slate-950 hidden sm:inline-block">
