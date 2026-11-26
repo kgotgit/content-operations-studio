@@ -228,43 +228,74 @@ Snapshots are tied to the deployment they were fetched from (see §7).
 
 ## 6. Integrating a real CMS (Drupal)
 
+### Single-fetch JSON envelope (recommended — zero HTML parsing)
+
+`content-presentation` exposes a single JSON envelope endpoint so non-Next.js consumers
+(Drupal/PHP, ASP.NET Core, etc.) make **one HTTP call**, do **zero HTML parsing**, and get
+guaranteed version consistency across `host`, `ssr`, and `payload`:
+
+```text
+GET /api/remote/navigation/{channel}/{experience}/{locale}
+```
+
+Response (`Cache-Control: public, s-maxage=300, stale-while-revalidate=3600`):
+
+```json
+{
+  "version": "0.4.16+0.1.0",
+  "flavour": "web/general/zh-Hant",
+  "src": "https://content-presentation.vercel.app/remote/navigation/web/general/zh-Hant",
+  "host": {
+    "url": "https://content-presentation.vercel.app/remote-host/remote-components-host.e98f6725.js",
+    "integrity": "sha384-...",
+    "sha256": "..."
+  },
+  "ssr": "<link rel=\"stylesheet\" ... data-rc-ssr><div data-rc-ssr>...</div>",
+  "payload": "<!DOCTYPE html>..."
+}
+```
+
+Working reference apps in this monorepo:
+- **PHP 8 / Drupal pattern (Vercel-ready):** [`apps/drupal-consumer/api/index.php`](../apps/drupal-consumer/api/index.php)
+- **ASP.NET Core 8 / C# pattern (`IMemoryCache` + `Dockerfile`):** [`apps/dotnet-consumer/Program.cs`](../apps/dotnet-consumer/Program.cs)
+
 ### Server side (PHP, cached)
 
 ```php
-$origin   = getenv('REMOTE_ORIGIN');                 // e.g. https://nav.company.com
-$flavour  = 'web/general/zh-Hant';
-$headers  = array_filter([
-  'Accept' => 'text/html',
+$origin  = getenv('REMOTE_ORIGIN');                 // e.g. https://content-presentation.vercel.app
+$flavour = 'web/general/zh-Hant';
+$headers = array_filter([
+  'Accept' => 'application/json',
   'x-vercel-protection-bypass' => getenv('VERCEL_AUTOMATION_BYPASS_SECRET') ?: NULL, // only if protected
 ]);
-$client   = \Drupal::httpClient();
 
-$manifest = json_decode((string) $client->get("$origin/remote-host/manifest.json", ['headers' => $headers])->getBody(), TRUE);
-$payload  = (string) $client->get("$origin/remote/navigation/$flavour", ['headers' => $headers, 'timeout' => 3])->getBody();
-$ssr      = remote_nav_extract_ssr($payload, $origin);  // port of extractSsrMarkup(), or a snapshot route (see below)
+$nav = json_decode(
+  (string) \Drupal::httpClient()->get("$origin/api/remote/navigation/$flavour", [
+    'headers' => $headers,
+    'timeout' => 3,
+  ])->getBody(),
+  TRUE
+);
 
-// Cache key MUST include the manifest sha256 (payload is tied to a remote deployment).
-$cid = "remote_nav:$flavour:" . $manifest['sha256'];
+// Cache key includes the host sha256 (payload is tied to a remote deployment).
+$cid = "remote_nav:$flavour:" . $nav['host']['sha256'];
 ```
 
 ### Twig
 
 ```twig
 <script type="module"
-        src="{{ remote_origin }}/remote-host/{{ manifest.file }}"
-        integrity="{{ manifest.integrity }}" crossorigin="anonymous"></script>
+        src="{{ nav.host.url }}"
+        integrity="{{ nav.host.integrity }}" crossorigin="anonymous"></script>
 
 <template id="rc-payload-{{ flavour_slug }}" data-remote-component-payload
-          data-src="{{ remote_origin }}/remote/navigation/{{ flavour }}">{{ payload|raw }}</template>
+          data-src="{{ nav.src }}">{{ nav.payload|raw }}</template>
 
-<remote-component src="{{ remote_origin }}/remote/navigation/{{ flavour }}"
-                  payload="rc-payload-{{ flavour_slug }}"><template shadowrootmode="open">{{ ssr|raw }}</template></remote-component>
+<remote-component src="{{ nav.src }}"
+                  payload="rc-payload-{{ flavour_slug }}"><template shadowrootmode="open">{{ nav.ssr|raw }}</template></remote-component>
 ```
 
 The page's own `<title>`, canonical, hreflang and `lang` remain Drupal's responsibility.
-
-> [!TIP]
-> To keep PHP free of HTML processing, the remote app could expose a dedicated snapshot route that returns `extractSsrMarkup()` output directly. Drupal would then make two fetches (payload + snapshot) and do no parsing.
 
 ---
 

@@ -160,7 +160,46 @@ Without this, the deployed Studio can't log in or query the dataset.
 
 ---
 
-## 3. Seeding data
+## 3. drupal-consumer (PHP 8.x on Vercel)
+
+`apps/drupal-consumer` is a true PHP 8.x consumer that calls `GET /api/remote/navigation/{channel}/{experience}/{locale}` once and renders the host bundle, Declarative Shadow DOM, and hydration payload with zero HTML parsing.
+
+### Create the project
+Dashboard: **Add New → Project → import the repo → Root Directory `apps/drupal-consumer`**.
+`apps/drupal-consumer/vercel.json` configures the `vercel-php@0.7.3` runtime and routes all requests to `api/index.php`.
+
+### Environment variables
+See [`apps/drupal-consumer/.env.example`](apps/drupal-consumer/.env.example):
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `REMOTE_ORIGIN` | yes | e.g. `https://content-presentation.vercel.app` |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | if remote is protected | sent server-side as `x-vercel-protection-bypass` |
+| `DEFAULT_CHANNEL`, `DEFAULT_EXPERIENCE`, `DEFAULT_LOCALE` | no | defaults: `web`, `general`, `en-US` |
+| `ROBOTS_DIRECTIVE` | no | defaults to `index, follow` on production, `noindex` elsewhere |
+
+---
+
+## 4. dotnet-consumer (ASP.NET Core 8 — Container Hosting)
+
+`apps/dotnet-consumer` is a true C# / ASP.NET Core 8 consumer using `IHttpClientFactory` + `IMemoryCache` against the same `/api/remote/navigation/{channel}/{experience}/{locale}` JSON envelope.
+
+> [!NOTE]
+> Vercel does not provide a native ASP.NET Core runtime. Deploy `apps/dotnet-consumer` using its multi-stage `Dockerfile` to **Azure Container Apps**, **Azure App Service**, **Fly.io**, **Render**, or **Google Cloud Run**.
+
+```bash
+docker build -t dotnet-consumer apps/dotnet-consumer
+docker run -p 8080:8080 \
+  -e REMOTE_ORIGIN=https://content-presentation.vercel.app \
+  -e CACHE_TTL_SECONDS=300 \
+  dotnet-consumer
+```
+
+See [`apps/dotnet-consumer/.env.example`](apps/dotnet-consumer/.env.example) and [`apps/dotnet-consumer/README.md`](apps/dotnet-consumer/README.md).
+
+---
+
+## 5. Seeding data
 ```bash
 SANITY_PROJECT_ID=he21d3pg SANITY_DATASET=production SANITY_AUTH_TOKEN=<editor-token> pnpm seed:nav
 ```

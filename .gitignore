@@ -36,3 +36,7 @@ yarn-error.log*
 .vercel
 .turbo
 apps/content-presentation/.remote-components
+
+# .NET build artifacts
+apps/dotnet-consumer/bin/
+apps/dotnet-consumer/obj/

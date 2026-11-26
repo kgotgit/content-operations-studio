@@ -6,8 +6,10 @@ remote component, and a server-rendered delivery path for legacy CMS hosts (e.g.
 
 | Path | What |
 | --- | --- |
-| `apps/content-presentation` | Next.js app: native pages, `/remote/navigation/*` fragments, bundled host, CMS preview |
+| `apps/content-presentation` | Next.js app: native pages, `/remote/navigation/*` fragments, `/api/remote/navigation/*` JSON envelope, bundled host, CMS preview |
 | `apps/content-studio` | Sanity Studio |
+| `apps/drupal-consumer` | True PHP 8.x consumer (Vercel-ready via `vercel-php`), zero HTML parsing |
+| `apps/dotnet-consumer` | True ASP.NET Core 8 (C#) consumer with `IMemoryCache` + `Dockerfile`, zero HTML parsing |
 | `packages/navigation-*` | Contract (types/schemas), Sanity queries, URL adapters, UI components |
 
 ## Docs
