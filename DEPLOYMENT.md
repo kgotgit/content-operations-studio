@@ -83,6 +83,8 @@ $response = \Drupal::httpClient()->get($remote_origin . '/remote/navigation/web/
 ```
 
 ### Payload pages on Vercel
+> Full architecture of the remote navigation delivery (host bundle, payload hook, Declarative Shadow DOM, CMS integration): see [docs/remote-navigation.md](docs/remote-navigation.md).
+
 The static generator needs a running remote, so it can't run inside `next build`. On Vercel the
 same pages are rendered on request by `app/drupal-preview/[[...flavour]]/route.ts`:
 
