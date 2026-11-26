@@ -7,9 +7,12 @@ import type { NavItemLevel1 } from '@content-ops/navigation-contract';
 export interface MegaMenuProps {
   items: NavItemLevel1[];
   isRemote?: boolean;
+  /** Maximum top-level items displayed on desktop to keep the bar sleek and uncluttered. */
+  maxItems?: number;
 }
 
-export function MegaMenu({ items }: MegaMenuProps) {
+export function MegaMenu({ items, maxItems = 4 }: MegaMenuProps) {
+  const visibleItems = maxItems > 0 ? items.slice(0, maxItems) : items;
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [activePath, setActivePath] = useState<string>('');
   const menuRef = useRef<HTMLElement>(null);
@@ -69,8 +72,8 @@ export function MegaMenu({ items }: MegaMenuProps) {
       className="flex items-center"
       onMouseLeave={handleMouseLeave}
     >
-      <ul className="flex items-center list-none m-0 p-0 space-x-1 sm:space-x-1.5">
-        {items.map((l1) => {
+      <ul className="flex items-center list-none m-0 p-0 gap-1">
+        {visibleItems.map((l1) => {
           const isOpen = activeMenuId === l1.id;
           const isDirectLink = !l1.isMegaMenu || !l1.sections || l1.sections.length === 0;
 
@@ -81,10 +84,10 @@ export function MegaMenu({ items }: MegaMenuProps) {
               <li key={l1.id}>
                 <a
                   href={l1.href || '#'}
-                  className={`inline-flex items-center px-3.5 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  className={`inline-flex items-center px-3.5 py-2 text-[13.5px] font-medium rounded-full transition-colors whitespace-nowrap ${
                     isCurrent
-                      ? 'text-blue-900 bg-blue-50'
-                      : 'text-slate-700 hover:text-blue-900 hover:bg-slate-50'
+                      ? 'text-slate-950 bg-slate-100 font-semibold'
+                      : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
                   }`}
                 >
                   {l1.title}
@@ -104,15 +107,15 @@ export function MegaMenu({ items }: MegaMenuProps) {
                 onClick={() => handleTriggerClick(l1.id)}
                 aria-expanded={isOpen}
                 aria-controls={`mega-menu-${l1.id}`}
-                className={`group inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                className={`group inline-flex items-center gap-1 px-3.5 py-2 text-[13.5px] font-medium rounded-full transition-all whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
                   isOpen
-                    ? 'text-blue-900 bg-blue-50/80 shadow-sm'
-                    : 'text-slate-700 hover:text-blue-900 hover:bg-slate-50'
+                    ? 'text-slate-950 bg-slate-100 font-semibold'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
                 }`}
               >
                 <span>{l1.title}</span>
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
                     isOpen ? 'rotate-180 text-blue-700' : 'text-slate-400 group-hover:text-slate-600'
                   }`}
                   aria-hidden="true"

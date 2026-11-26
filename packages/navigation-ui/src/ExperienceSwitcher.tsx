@@ -17,7 +17,7 @@ export function ExperienceSwitcher({
   if (!options || options.length === 0) return null;
 
   return (
-    <nav aria-label="Organizational Experiences" className="flex items-center space-x-1">
+    <nav aria-label="Organizational Experiences" className="flex items-center h-full gap-4 sm:gap-5">
       {options.map((option) => {
         const isActive = option.id === currentExperience;
         return (
@@ -31,10 +31,10 @@ export function ExperienceSwitcher({
               }
             }}
             aria-current={isActive ? 'page' : undefined}
-            className={`px-3 py-1 text-xs font-semibold rounded-t-md transition-colors ${
+            className={`relative h-full inline-flex items-center text-[11.5px] tracking-tight transition-colors ${
               isActive
-                ? 'bg-white text-blue-900 border-t-2 border-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                ? 'font-semibold text-slate-950 after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-blue-700 after:rounded-full'
+                : 'font-medium text-slate-500 hover:text-slate-900'
             }`}
           >
             {option.title}
