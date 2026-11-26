@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# content-presentation (Next.js App Router)
 
-## Getting Started
+Next.js 16 application that serves:
+1. Native multi-experience / multi-locale pages (`/[locale]/[experience]`).
+2. Decoupled remote navigation fragments (`/remote/navigation/[channel]/[experience]/[locale]`).
+3. The prebuilt, content-hashed `remote-components` ESM host bundle (`/remote-host/*`).
+4. The single-fetch JSON envelope API (`/api/remote/navigation/[channel]/[experience]/[locale]`) consumed by PHP and .NET apps.
+5. Runtime-rendered CMS preview pages (`/drupal-preview/*` and `/drupal-pages/*.html`).
 
-First, run the development server:
+## Local Workspace Setup
+
+1. Install dependencies from the **monorepo root**:
+   ```bash
+   pnpm install
+   ```
+2. Create `.env.local` from the template:
+   ```bash
+   cp apps/content-presentation/.env.example apps/content-presentation/.env.local
+   ```
+   Set `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` (e.g. `dev`), and `REVALIDATION_SECRET` (e.g. `openssl rand -hex 32`).
+
+## Start & Build Commands
+
+Run from the monorepo root (or inside `apps/content-presentation`):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter content-presentation dev                      # builds host bundle, then starts next dev on :3000
+pnpm --filter content-presentation build                    # builds host bundle, then production next build
+pnpm --filter content-presentation start                    # serves the production build on :3000
+pnpm --filter content-presentation build:remote-host        # rebuilds public/remote-host/* + manifest.json only
+pnpm --filter content-presentation generate:payload-pages   # generates static HTML snapshots into dist-drupal-pages/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Example Routes (`http://localhost:3000`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | Purpose |
+| --- | --- |
+| `/en-US/general` | Native Next.js page — Personal / Investing (`en-US`) |
+| `/zh-Hant/general` | Native Next.js page — Personal / Investing (`zh-Hant`) |
+| `/es/general` | Native Next.js page — Personal / Investing (`es`) |
+| `/en-US/retirement` | Native Next.js page — Workplace & Retirement |
+| `/en-US/advisorservices` | Native Next.js page — Advisor Services |
+| `/remote/navigation/web/general/en-US` | Raw `<ExposeRemoteComponent>` HTML/RSC fragment (`noindex, follow`) |
+| `/api/remote/navigation/web/general/zh-Hant` | Single-fetch JSON envelope (`host`, `ssr`, `payload`) for PHP / .NET consumers |
+| `/remote-host/manifest.json` | Host bundle manifest (version, content-hashed filename, SRI integrity, prod/dev variants) |
+| `/drupal-pages/index.html` | Runtime-rendered CMS preview with all 4 default flavours |
+| `/drupal-pages/web-general-zh-Hant.html` | Runtime-rendered CMS preview (single flavour; alias for `/drupal-preview/web/general/zh-Hant`) |
+| `POST /api/revalidate` | On-demand Sanity/Smartling cache invalidation (`Authorization: Bearer <REVALIDATION_SECRET>`) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docs & Deployment
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Full architecture: [docs/remote-navigation.md](../../docs/remote-navigation.md)
+- Vercel setup & env vars: [DEPLOYMENT.md](../../DEPLOYMENT.md)
