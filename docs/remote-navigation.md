@@ -148,31 +148,7 @@ text in the payload (①). Brotli compression on Vercel removes most of the size
 
 ## 4. Runtime sequence
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant P as HTML parser
-    participant SR as Shadow root
-    participant H as payload-hook.js
-    participant L as remote-components library
-    participant R as React
-
-    P->>SR: template shadowrootmode becomes a shadow root (snapshot marked data-rc-ssr)
-    Note over SR: Header visible, styled, crawlable (no JS yet)
-    P->>H: module script runs (host bundle; hook is imported first)
-    H->>H: patch Element.prototype.attachShadow and add beforeload listener
-    L->>L: customElements.define('remote-component'), element upgrades, load()
-    L->>H: this.attachShadow()
-    H-->>L: return EXISTING root without clearing it, start MutationObserver
-    L->>H: dispatch 'beforeload' (sync), hook sets element.onRequest
-    L->>H: onRequest(url)
-    H-->>L: new Response(payload HTML), so fetch() is skipped
-    L->>SR: append live component (same markup)
-    SR->>H: MutationObserver callback (microtask, before next paint)
-    H->>SR: remove div[data-rc-ssr]
-    L->>R: hydrateRoot(live component, RSC flight data)
-    Note over SR: Exactly one header in every frame, now interactive
-```
+![Runtime sequence from first byte to hydration](images/runtime-sequence.jpg)
 
 ### Payload hook details (`scripts/remote-host/payload-hook.js`)
 
