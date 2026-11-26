@@ -165,8 +165,17 @@ Without this, the deployed Studio can't log in or query the dataset.
 `apps/drupal-consumer` is a true PHP 8.x consumer that calls `GET /api/remote/navigation/{channel}/{experience}/{locale}` once and renders the host bundle, Declarative Shadow DOM, and hydration payload with zero HTML parsing.
 
 ### Create the project
-Dashboard: **Add New → Project → import the repo → Root Directory `apps/drupal-consumer`**.
-`apps/drupal-consumer/vercel.json` configures the `vercel-php@0.7.3` runtime and routes all requests to `api/index.php`.
+1. Push `main` so `content-presentation` has `/api/remote/navigation/*` live.
+2. Dashboard: **Add New → Project → import the repo → Root Directory `apps/drupal-consumer`**.
+3. `apps/drupal-consumer/vercel.json` automatically configures the `vercel-php@0.7.3` runtime and rewrites all requests to `/api/index.php` (no custom build command needed).
+4. Add `REMOTE_ORIGIN` (and `VERCEL_AUTOMATION_BYPASS_SECRET` if targeting a protected preview) in **Environment Variables**, then click **Deploy**.
+
+### Run locally
+```bash
+# Install PHP on macOS: `brew install php` (or Laravel Herd if not using Homebrew)
+REMOTE_ORIGIN=http://localhost:3000 \
+  php -S localhost:8080 -t apps/drupal-consumer/api apps/drupal-consumer/api/index.php
+```
 
 ### Environment variables
 See [`apps/drupal-consumer/.env.example`](apps/drupal-consumer/.env.example):

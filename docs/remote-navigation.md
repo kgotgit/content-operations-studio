@@ -380,3 +380,97 @@ pnpm --filter content-presentation generate:payload-pages   # static snapshots (
 ```
 
 Open `http://localhost:3000/drupal-pages/index.html` to see all flavours embedded.
+
+---
+
+## 12. Running & deploying the PHP and .NET consumer apps
+
+Both consumer apps call the single JSON envelope route `GET /api/remote/navigation/{channel}/{experience}/{locale}` and do zero HTML parsing.
+
+### Prerequisites
+
+Either run `content-presentation` locally (`pnpm --filter content-presentation dev` at `http://localhost:3000`) or point `REMOTE_ORIGIN` at your deployed Vercel URL (e.g. `https://content-presentation.vercel.app`).
+
+### A. PHP consumer (`apps/drupal-consumer`)
+
+#### Install PHP locally (macOS)
+
+- **With Homebrew:** `brew install php`
+- **Without Homebrew:** install [Laravel Herd](https://herd.laravel.com/) (free `.dmg`, bundles PHP for Apple Silicon) or install Homebrew first:
+  ```bash
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  brew install php
+  ```
+
+#### Run locally (port 8080)
+
+```bash
+REMOTE_ORIGIN=http://localhost:3000 \
+  php -S localhost:8080 -t apps/drupal-consumer/api apps/drupal-consumer/api/index.php
+```
+
+If targeting a protected Vercel preview deployment, also pass `VERCEL_AUTOMATION_BYPASS_SECRET`:
+
+```bash
+REMOTE_ORIGIN=https://<your-preview>.vercel.app \
+VERCEL_AUTOMATION_BYPASS_SECRET=<your-secret> \
+  php -S localhost:8080 -t apps/drupal-consumer/api apps/drupal-consumer/api/index.php
+```
+
+Test URLs:
+- `http://localhost:8080/` (`web/general/en-US`)
+- `http://localhost:8080/general/zh-Hant`
+- `http://localhost:8080/retirement/en-US`
+- `http://localhost:8080/advisorservices/en-US`
+
+#### Setup in Vercel
+
+1. Push `main` so `content-presentation` has `/api/remote/navigation/*` live.
+2. In the Vercel Dashboard: **Add New → Project** → import this Git repository.
+3. Set **Root Directory** to `apps/drupal-consumer`. (`apps/drupal-consumer/vercel.json` configures `vercel-php@0.7.3` and rewrites all paths to `/api/index.php`.)
+4. Under **Environment Variables**, add:
+   - `REMOTE_ORIGIN` = `https://content-presentation.vercel.app` (or your production domain)
+   - `VERCEL_AUTOMATION_BYPASS_SECRET` = *(only if `REMOTE_ORIGIN` has Deployment Protection enabled)*
+   - Optional: `DEFAULT_CHANNEL`, `DEFAULT_EXPERIENCE`, `DEFAULT_LOCALE`, `ROBOTS_DIRECTIVE`
+5. Click **Deploy**.
+
+### B. ASP.NET Core 8 consumer (`apps/dotnet-consumer`)
+
+#### Install .NET 8 SDK locally (macOS)
+
+- **Without Homebrew (recommended, no `sudo`):**
+  ```bash
+  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
+  export PATH="$HOME/.dotnet:$PATH"
+  ```
+  *(Or download the macOS Arm64 `.pkg` installer from [dotnet.microsoft.com/download/dotnet/8.0](https://dotnet.microsoft.com/download/dotnet/8.0).)*
+- **With Homebrew:** `brew install --cask dotnet-sdk`
+
+#### Run locally (port 5080)
+
+```bash
+cd apps/dotnet-consumer
+REMOTE_ORIGIN=http://localhost:3000 dotnet run --urls http://localhost:5080
+```
+
+Test URLs:
+- `http://localhost:5080/` (`web/general/en-US`)
+- `http://localhost:5080/general/zh-Hant`
+- `http://localhost:5080/retirement/en-US`
+- `http://localhost:5080/health`
+
+#### Run / deploy with Docker (no local .NET SDK required)
+
+> [!NOTE]
+> Vercel does not offer a native ASP.NET Core runtime. Deploy `apps/dotnet-consumer` via its multi-stage `Dockerfile` to **Azure Container Apps**, **Azure App Service**, **Fly.io**, **Render**, or **Google Cloud Run**.
+
+```bash
+docker build -t dotnet-consumer apps/dotnet-consumer
+docker run -p 5080:8080 \
+  -e REMOTE_ORIGIN=https://content-presentation.vercel.app \
+  -e CACHE_TTL_SECONDS=300 \
+  dotnet-consumer
+```
+
+See [DEPLOYMENT.md](../DEPLOYMENT.md) for the full multi-project Vercel setup.
