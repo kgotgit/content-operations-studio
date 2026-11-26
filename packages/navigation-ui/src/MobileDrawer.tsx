@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Accordion from '@radix-ui/react-accordion';
 import { Menu, X, ChevronDown, ArrowRight, ExternalLink } from 'lucide-react';
@@ -12,6 +12,7 @@ import type {
   SupportedLocale,
 } from '@content-ops/navigation-contract';
 import { LocaleSelector } from './LocaleSelector';
+import { usePortalContainer } from './usePortalContainer';
 
 export interface MobileDrawerProps {
   items: NavItemLevel1[];
@@ -29,11 +30,14 @@ export function MobileDrawer({
   localeOptions,
 }: MobileDrawerProps) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const portalContainer = usePortalContainer(triggerRef);
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           aria-label="Open mobile navigation menu"
           className="p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md lg:hidden"
@@ -42,13 +46,13 @@ export function MobileDrawer({
         </button>
       </Dialog.Trigger>
 
-      <Dialog.Portal>
+      <Dialog.Portal container={portalContainer ?? undefined}>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
         <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white shadow-2xl p-5 overflow-y-auto focus:outline-none flex flex-col justify-between">
           <div>
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <span className="font-bold text-lg text-blue-950">Navigation</span>
+              <Dialog.Title className="font-bold text-lg text-blue-950">Navigation</Dialog.Title>
               <Dialog.Close asChild>
                 <button
                   type="button"

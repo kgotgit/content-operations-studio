@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Search, X, ArrowRight } from 'lucide-react';
+import { usePortalContainer } from './usePortalContainer';
 
 export function SearchDialog() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const portalContainer = usePortalContainer(triggerRef);
 
   // Keyboard shortcut: Cmd+K / Ctrl+K
   useEffect(() => {
@@ -24,6 +27,7 @@ export function SearchDialog() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           aria-label="Search site (Cmd+K)"
           className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
@@ -36,9 +40,10 @@ export function SearchDialog() {
         </button>
       </Dialog.Trigger>
 
-      <Dialog.Portal>
+      <Dialog.Portal container={portalContainer ?? undefined}>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content className="fixed left-[50%] top-[20%] z-50 w-full max-w-lg -translate-x-1/2 bg-white rounded-xl shadow-2xl border border-slate-200 p-4 focus:outline-none">
+          <Dialog.Title className="sr-only">Search site</Dialog.Title>
           <div className="flex items-center border-b border-slate-200 pb-3">
             <Search className="w-5 h-5 text-slate-400 mr-2" />
             <input

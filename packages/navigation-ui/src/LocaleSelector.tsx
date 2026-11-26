@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import type { LocaleOption, SupportedLocale } from '@content-ops/navigation-contract';
+import { usePortalContainer } from './usePortalContainer';
 
 export interface LocaleSelectorProps {
   currentLocale: SupportedLocale;
@@ -54,10 +55,14 @@ export function LocaleSelector({
     }
   };
 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const portalContainer = usePortalContainer(triggerRef);
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           aria-label="Select international region and language"
           className="flex items-center gap-1.5 px-2 py-1 text-xs text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors"
@@ -68,7 +73,7 @@ export function LocaleSelector({
         </button>
       </DropdownMenu.Trigger>
 
-      <DropdownMenu.Portal>
+      <DropdownMenu.Portal container={portalContainer ?? undefined}>
         <DropdownMenu.Content
           align="end"
           className="z-50 min-w-[220px] bg-white rounded-lg p-1.5 shadow-xl border border-slate-200 text-xs focus:outline-none"
