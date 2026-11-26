@@ -244,16 +244,37 @@ Response (`Cache-Control: public, s-maxage=300, stale-while-revalidate=3600`):
 {
   "version": "0.4.16+0.1.0",
   "flavour": "web/general/zh-Hant",
+  "channel": "web",
+  "experience": "general",
+  "locale": "zh-Hant",
   "src": "https://content-presentation.vercel.app/remote/navigation/web/general/zh-Hant",
   "host": {
     "url": "https://content-presentation.vercel.app/remote-host/remote-components-host.e98f6725.js",
+    "file": "remote-components-host.e98f6725.js",
+    "mode": "production",
     "integrity": "sha384-...",
     "sha256": "..."
   },
   "ssr": "<link rel=\"stylesheet\" ... data-rc-ssr><div data-rc-ssr>...</div>",
-  "payload": "<!DOCTYPE html>..."
+  "payload": "<!DOCTYPE html>...",
+  "generatedAt": "2026-11-26T04:54:19.644Z"
 }
 ```
+
+#### Response fields explained
+
+| Field | Purpose | Where the consumer puts it |
+| --- | --- | --- |
+| `ssr` | **SEO & instant first paint.** Clean HTML snapshot of the header with stylesheet `<link>` URLs absolutized to the remote origin, all `<script>` tags stripped, and `data-rc-ssr` markers added so `payload-hook.js` can swap it out without a flash once hydrated. | Inside `<remote-component><template shadowrootmode="open">{{ ssr }}</template></remote-component>` |
+| `payload` | **Client-side hydration without a browser fetch.** The full, untouched Next.js HTML + RSC flight response from `/remote/navigation/...`. Kept inert so scripts don't run in the host page; `payload-hook.js` returns it from `onRequest` so the browser never calls `/remote/navigation/*`. | Inside `<template id="rc-payload-..." data-remote-component-payload data-src="{{ src }}">{{ payload }}</template>` |
+| `host.url` | Full URL to the content-hashed, prebuilt ESM host bundle (`remote-components` + React + `payload-hook.js`). Automatically busts CDN/browser caches on every release. | `<script type="module" src="{{ host.url }}">` and `<link rel="modulepreload">` |
+| `host.integrity` | Subresource Integrity (`sha384-...`) hash for the host bundle. | `integrity="{{ host.integrity }}" crossorigin="anonymous"` on the `<script>` / `<link>` tags |
+| `host.sha256` | Content hash of the host bundle — use it in your CMS cache key so cached payloads invalidate whenever a new remote build deploys. | Server-side cache key (e.g. `remote_nav:{flavour}:{host.sha256}`) |
+| `host.file` / `host.mode` | Bundle filename and React build mode (`production` or `development`, matched automatically to the remote server). | Diagnostics / logging |
+| `src` | Canonical remote component URL. Must match between `<remote-component src>` and `<template data-src>` so `payload-hook.js` intercepts it; also acts as the fallback URL if no payload matches. | `src="{{ src }}"` on `<remote-component>` and `data-src="{{ src }}"` on the payload `<template>` |
+| `version` | Combined `<remote-components-version>+<app-version>` string (e.g. `0.4.16+0.1.0`). | Diagnostics / telemetry |
+| `flavour`, `channel`, `experience`, `locale` | Normalized routing metadata for the requested navigation variant. | `<html lang="{{ locale }}">`, `Content-Language`, template IDs |
+| `generatedAt` | ISO-8601 timestamp of when the envelope was assembled on the Next.js server. | Debugging / cache-age inspection |
 
 Working reference apps in this monorepo:
 - **PHP 8 / Drupal pattern (Vercel-ready):** [`apps/drupal-consumer/api/index.php`](../apps/drupal-consumer/api/index.php)
