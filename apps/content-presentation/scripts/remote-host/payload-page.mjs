@@ -11,13 +11,13 @@
  */
 
 export const DEFAULT_FLAVOURS = [
-  'web/general/en-US',
-  'web/general/zh-Hant',
-  'web/general/es',
-  'web/retirement/en-US',
+  'web/retail/en-US',
+  'web/retail/zh-Hant',
+  'web/retail/es',
+  'web/advisorServices/en-US',
 ];
 
-const FLAVOUR_RE = /^[a-z]+\/[a-z]+\/[A-Za-z-]+$/;
+const FLAVOUR_RE = /^[a-zA-Z]+\/[a-zA-Z]+\/[A-Za-z-]+$/;
 
 export const isValidFlavour = (flavour) => FLAVOUR_RE.test(flavour);
 export const slug = (flavour) => flavour.replace(/\//g, '-');

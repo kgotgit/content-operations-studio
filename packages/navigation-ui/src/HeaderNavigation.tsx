@@ -19,30 +19,36 @@ import { AuthZoneIsland } from './AuthZoneIsland';
 
 export interface HeaderNavigationProps {
   data: NavigationDocument;
+  /** Dedicated per-experience utilities menu (menuType: 'utility') */
+  utilitiesMenu?: NavigationDocument;
   currentExperience?: ExperienceType;
   currentLocale?: SupportedLocale;
   currentChannel?: ChannelType;
   isRemote?: boolean;
   brandName?: string;
   brandLogoUrl?: string;
-  /** Maximum top-level nav items shown in the desktop header bar. Defaults to 4. */
+  /** Maximum top-level nav items shown in the desktop header bar. Defaults to 5. */
   maxDesktopItems?: number;
   className?: string;
 }
 
 export function HeaderNavigation({
   data,
-  currentExperience = data.experience || 'general',
+  utilitiesMenu,
+  currentExperience = data.experience || 'retail',
   currentLocale = data.locale || 'en-US',
   currentChannel = data.channel || 'web',
   isRemote = false,
   brandName = 'APEX',
   brandLogoUrl = '/',
-  maxDesktopItems = 4,
+  maxDesktopItems = 5,
   className = '',
 }: HeaderNavigationProps) {
-  // 1. Resolve URLs based on experience domain mapping & foreign host context
+  // 1. Resolve URLs based on locale prefix, experience domain mapping & foreign host context
   const normalizedDoc = resolveNavigationUrls(data, { isRemote });
+  const normalizedUtilities = utilitiesMenu
+    ? resolveNavigationUrls(utilitiesMenu, { isRemote })
+    : undefined;
 
   // 2. Augment with active experience switcher and locale options
   const finalDoc = withExperienceAndLocaleOptions(
@@ -53,12 +59,8 @@ export function HeaderNavigation({
     isRemote,
   );
 
-  const loginUrl = isRemote
-    ? resolveHref('/login', currentExperience, undefined, true)
-    : '/login';
-  const openAccountUrl = isRemote
-    ? resolveHref('/open-account', currentExperience, undefined, true)
-    : '/open-account';
+  const loginUrl = resolveHref('/login', currentExperience, undefined, isRemote, currentLocale);
+  const openAccountUrl = resolveHref('/open-account', currentExperience, undefined, isRemote, currentLocale);
 
   return (
     <div
@@ -66,14 +68,16 @@ export function HeaderNavigation({
       className={`remote-nav-scope relative z-40 w-full bg-white text-slate-900 antialiased font-sans ${className}`}
       data-channel={currentChannel}
       data-experience={currentExperience}
+      data-menu-type={finalDoc.menuType || 'global'}
       data-locale={currentLocale}
     >
       <SkipToContent />
 
-      {/* Top Utility Bar: Experience Switcher + Quiet Utility Links & Locale */}
+      {/* Top Utility Bar: Experience Switcher + Per-Experience Utilities Menu & Locale */}
       <UtilityBar
         currentExperience={currentExperience}
         currentLocale={currentLocale}
+        items={normalizedUtilities?.navItems}
         utilityLinks={finalDoc.utilityLinks}
         experienceOptions={finalDoc.experienceSwitcherLinks}
         localeOptions={finalDoc.localeOptions}
@@ -98,10 +102,10 @@ export function HeaderNavigation({
               </span>
             </a>
 
-            {/* Desktop Navigation (capped to maxDesktopItems for an uncluttered layout) */}
+            {/* Desktop Navigation (L1 -> L2 -> L3, capped at maxDesktopItems) */}
             <div className="hidden lg:flex items-center">
               <MegaMenu
-                items={finalDoc.items}
+                items={finalDoc.navItems}
                 isRemote={isRemote}
                 maxItems={maxDesktopItems}
               />
@@ -119,7 +123,7 @@ export function HeaderNavigation({
             />
 
             <MobileDrawer
-              items={finalDoc.items}
+              items={finalDoc.navItems}
               currentExperience={currentExperience}
               currentLocale={currentLocale}
               experienceOptions={finalDoc.experienceSwitcherLinks}

@@ -58,18 +58,28 @@ export default async function RemoteNavigationPage({
     notFound();
   }
 
-  // Fetch navigation data (with Smartling fallback to canonical en-US if unseeded)
-  const navData = await getNavigationData({
-    channel: channel as ChannelType,
-    experience: experience as ExperienceType,
-    locale: locale as SupportedLocale,
-  });
+  // Fetch Global Header + Per-Experience Utilities Menu in parallel
+  const [navData, utilitiesMenu] = await Promise.all([
+    getNavigationData({
+      channel: channel as ChannelType,
+      experience: experience as ExperienceType,
+      menuType: 'global',
+      locale: locale as SupportedLocale,
+    }),
+    getNavigationData({
+      channel: channel as ChannelType,
+      experience: experience as ExperienceType,
+      menuType: 'utility',
+      locale: locale as SupportedLocale,
+    }),
+  ]);
 
   return (
     <ExposeRemoteComponent name="header-navigation">
       <div id="remote-navigation-root" className="nav-isolated-scope w-full">
         <HeaderNavigation
           data={navData}
+          utilitiesMenu={utilitiesMenu}
           currentExperience={experience as ExperienceType}
           currentLocale={locale as SupportedLocale}
           currentChannel={channel as ChannelType}

@@ -285,7 +285,8 @@ navigationMenu (document)
 ---
 
 ### Next Steps to Decide
-- [ ] **Ready to implement?** Decide whether to prototype these schemas in `packages/navigation-sanity` (alongside updating `packages/navigation-contract` and `scripts/seed-navigation.mjs` from `.playground/navigation.yml`) or refine any edge cases first (e.g., utility links, promo cards, or Studio desk structure grouping).
+- [x] **Implemented v1 across the monorepo** (`navigation-contract`, `navigation-sanity`, `navigation-adapters`, `navigation-ui`, `content-presentation`, `content-studio`, and `scripts/`). Verified with `tsc --noEmit`, `sanity build`, and `next build` (188/188 static pages).
+- [ ] **Optional v1.1 enhancements:** Add a custom Sanity Studio input component on `navItem.target` to render the live *"Also Used In"* incoming-references badge directly inside the Studio form, and seed the live Sanity dataset with `pnpm seed:nav`.
 
 ---
 
@@ -301,4 +302,5 @@ navigationMenu (document)
 | D6 | **Derived clickability from `navItems` presence** (leaf = navigable, branch = dropdown) | Eliminates boolean/structure drift (e.g., `isMegaMenu`) and aligns naturally with L3 leaf nodes handing off to Section Nav | 2026-11-26 |
 | D7 | **Uniform recursive `navItem` object** instead of `navItemL1`/`L2`/`L3` | Simplifies schema maintenance and GROQ projections; depth limits enforced per `menuType` via validation | 2026-11-26 |
 | D8 | **Scoping taxonomy:** `channel` (`web`, `mobile`, `email`, `agentic`) × `experience` (`retail`, `advisorServices`, `wealthManagement`, `retirementServices`, `workPlaceServices`) × `menuType` × `locale` | Consistent with existing `navigationMenu.ts` naming and `navigation.yml` business lines | 2026-11-26 |
+| D9 | **Per-experience `utilitiesMenu` modeled as `menuType: 'utility'`** (max depth 1, uniform `navItem` + `navTarget`) | Each experience owns its own utility links independently without duplicating a separate `utilityLink` schema or coupling utility edits to Global Header releases | 2026-11-26 |
 

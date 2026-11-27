@@ -36,8 +36,8 @@ const nextConfig: NextConfig = {
         { source: "/drupal-pages", destination: "/drupal-preview" },
         { source: "/drupal-pages/index.html", destination: "/drupal-preview" },
         {
-          // /drupal-pages/web-general-zh-Hant.html -> /drupal-preview/web/general/zh-Hant
-          source: "/drupal-pages/:channel([a-z]+)-:experience([a-z]+)-:locale([A-Za-z]+(?:-[A-Za-z]+)?)\\.html",
+          // /drupal-pages/web-retail-zh-Hant.html -> /drupal-preview/web/retail/zh-Hant
+          source: "/drupal-pages/:channel([a-z]+)-:experience([a-zA-Z]+)-:locale([A-Za-z]+(?:-[A-Za-z]+)?)\\.html",
           destination: "/drupal-preview/:channel/:experience/:locale",
         },
       ],

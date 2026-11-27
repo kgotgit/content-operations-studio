@@ -1,11 +1,19 @@
 import React from 'react';
 import {
-  ExperienceType,
-  SupportedLocale,
+  EXPERIENCE_METADATA,
   LOCALE_METADATA,
+  resolveTargetHref,
+  type ExperienceType,
+  type SupportedLocale,
 } from '@content-ops/navigation-contract';
-import { getNavigationData } from '@content-ops/navigation-sanity';
-import { ArrowRight, CheckCircle, Globe, Layers, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
+import {
+  MOCK_NAV_TARGETS,
+  getMockTargetUsage,
+  getNavigationData,
+  getSectionNavigations,
+} from '@content-ops/navigation-sanity';
+import { SectionNavigation } from '@content-ops/navigation-ui';
+import { ArrowRight, CheckCircle, Globe, Layers, Link2, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
 
 export default async function ExperiencePage({
   params,
@@ -13,24 +21,27 @@ export default async function ExperiencePage({
   params: Promise<{ locale: string; experience: string }>;
 }) {
   const { locale, experience } = await params;
-  const navData = await getNavigationData({ channel: 'web', experience, locale });
+  const typedExp = experience as ExperienceType;
+  const typedLocale = locale as SupportedLocale;
 
-  const experienceNames: Record<ExperienceType, string> = {
-    general: 'Personal & Retail Investing (General)',
-    retirement: 'Workplace & Retirement Plans',
-    advisorservices: 'Institutional Advisor & RIA Services',
+  const [navData, sectionNavs] = await Promise.all([
+    getNavigationData({ channel: 'web', experience: typedExp, menuType: 'global', locale: typedLocale }),
+    getSectionNavigations({ channel: 'web', experience: typedExp, locale: typedLocale }),
+  ]);
+
+  const expMeta = EXPERIENCE_METADATA[typedExp] || {
+    label: experience,
+    shortLabel: experience,
+    description: '',
   };
 
-  const experienceDescriptions: Record<ExperienceType, string> = {
-    general: 'Direct-to-consumer prospect & client portal with $0 commission brokerage, IRAs, flagship active desktop platforms, and comprehensive wealth guidance.',
-    retirement: 'Enterprise corporate 401(k) management, stock plan equity administration, executive deferred compensation, and financial wellness coaching.',
-    advisorservices: 'Institutional custodian solutions for independent Registered Investment Advisors (RIAs), block trading technology, and practice consulting.',
-  };
-
-  const currentLocaleMeta = LOCALE_METADATA[locale as SupportedLocale] || {
+  const currentLocaleMeta = LOCALE_METADATA[typedLocale] || {
     label: locale,
     direction: 'ltr',
   };
+
+  // Highlight canonical enterprise targets shared across multiple experiences
+  const sharedTargets = MOCK_NAV_TARGETS.filter((t) => t.owningExperience === 'enterprise');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
@@ -41,15 +52,15 @@ export default async function ExperiencePage({
         <div className="max-w-3xl space-y-4 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-800/60 border border-blue-400/30 rounded-full text-xs font-semibold text-blue-200">
             <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-            <span>Modernized from Legacy Drupal to Decoupled Next.js</span>
+            <span>Apex Scoped Navigation &bull; Uniform navItem + Canonical navTarget</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            {experienceNames[experience as ExperienceType] || experience}
+            {expMeta.label}
           </h1>
 
           <p className="text-base sm:text-lg text-blue-200 leading-relaxed">
-            {experienceDescriptions[experience as ExperienceType] || ''}
+            {expMeta.description}
           </p>
 
           <div className="pt-2 flex flex-wrap gap-3">
@@ -74,6 +85,64 @@ export default async function ExperiencePage({
         </div>
       </section>
 
+      {/* Live Section Navigation (L3 -> L4+) + Canonical Target Reuse */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left: Section Navigation (L3 Handoff) */}
+        <div className="lg:col-span-4 space-y-4">
+          {sectionNavs.map((sectionDoc) => (
+            <SectionNavigation key={sectionDoc._id || sectionDoc.title} data={sectionDoc} />
+          ))}
+        </div>
+
+        {/* Right: Canonical navTarget Reuse ("Also Used In") */}
+        <div className="lg:col-span-8 bg-white rounded-xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-blue-700 rounded-lg">
+                <Link2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Canonical <code>navTarget</code> Reuse &amp; Localized URLs
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Single source of truth for legacy CMS → Sanity Page migration, auto-prefixed for <code>{locale}</code>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {sharedTargets.map((target) => {
+              const resolvedUrl = resolveTargetHref(target, typedLocale);
+              const usages = getMockTargetUsage(target._id);
+              return (
+                <div key={target._id} className="py-3 first:pt-0 last:pb-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-slate-900">{target.title}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-100 text-slate-700">
+                      {target.destinationType === 'sanityPage' ? 'Sanity Page' : 'Legacy CMS'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono text-blue-700">{resolvedUrl}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[11px] text-slate-400">Also used in:</span>
+                    {usages.map((u) => (
+                      <span
+                        key={u._id}
+                        className="px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-800 rounded-md border border-blue-100"
+                      >
+                        {u.experience} ({u.menuType} · {u.locale})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Architecture Highlights Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Smartling Localization Status */}
@@ -95,7 +164,8 @@ export default async function ExperiencePage({
           <h2 className="text-base font-bold text-slate-900">Smartling Automated Localization</h2>
           <p className="text-xs text-slate-600 leading-relaxed">
             Current locale is <strong className="text-slate-900">{currentLocaleMeta.label}</strong> (
-            <code>{locale}</code>). English content is authored centrally and converted into target locales via automated Smartling translation jobs.
+            <code>{locale}</code>). Canonical paths automatically receive localized prefixes (e.g.{' '}
+            <code>/es/</code>, <code>/zh-hant/</code>) with optional per-locale slug overrides.
           </p>
           <div className="text-[11px] font-mono bg-slate-50 p-2 rounded text-slate-600 border border-slate-200">
             Smartling Job: {navData.smartling?.jobId || 'N/A (Canonical Source)'}
@@ -116,8 +186,8 @@ export default async function ExperiencePage({
           </div>
           <h2 className="text-base font-bold text-slate-900">Vercel Remote Components</h2>
           <p className="text-xs text-slate-600 leading-relaxed">
-            This header functions both natively in App Router layouts and remotely via{' '}
-            <code>@vercel/remote-components</code>. Legacy Drupal pages embed the exact same navigation via Edge CDN.
+            This header renders both natively in App Router layouts and remotely via{' '}
+            <code>@vercel/remote-components</code> for legacy CMS pages via Edge CDN.
           </p>
           <div className="text-[11px] font-mono bg-slate-50 p-2 rounded text-slate-600 border border-slate-200">
             Route: /remote/navigation/web/{experience}/{locale}
@@ -136,19 +206,19 @@ export default async function ExperiencePage({
               WCAG 2.1 AA
             </span>
           </div>
-          <h2 className="text-base font-bold text-slate-900">Enterprise Ready</h2>
+          <h2 className="text-base font-bold text-slate-900">Domain Governance &amp; Depth Guard</h2>
           <ul className="text-xs text-slate-600 space-y-1.5 list-none p-0 m-0">
             <li className="flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Full Radix ARIA keyboard navigation</span>
+              <span>Global Header strictly capped at 3 levels (L1–L3)</span>
             </li>
             <li className="flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Cross-domain relative/absolute URL resolution</span>
+              <span>Derived clickability: leaf = link, branch = dropdown</span>
             </li>
             <li className="flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Dynamic client-side Auth Island</span>
+              <span>Independent editorial workflows per experience</span>
             </li>
           </ul>
         </div>

@@ -3,19 +3,21 @@
 import React, { useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Accordion from '@radix-ui/react-accordion';
-import { Menu, X, ChevronDown, ArrowRight, ExternalLink } from 'lucide-react';
+import { Menu, X, ChevronDown, ArrowRight } from 'lucide-react';
 import type {
-  NavItemLevel1,
   ExperienceOption,
-  LocaleOption,
   ExperienceType,
+  LocaleOption,
+  NavItem,
   SupportedLocale,
 } from '@content-ops/navigation-contract';
+
+const hasChildren = (item: NavItem) => Array.isArray(item.navItems) && item.navItems.length > 0;
 import { LocaleSelector } from './LocaleSelector';
 import { usePortalContainer } from './usePortalContainer';
 
 export interface MobileDrawerProps {
-  items: NavItemLevel1[];
+  items: NavItem[];
   currentExperience: ExperienceType;
   currentLocale: SupportedLocale;
   experienceOptions?: ExperienceOption[];
@@ -86,18 +88,18 @@ export function MobileDrawer({
               </div>
             </div>
 
-            {/* Navigation Accordion for L1, L2, L3 */}
+            {/* Uniform NavItem Accordion (L1 -> L2 -> L3) */}
             <div className="py-4">
               <Accordion.Root type="multiple" className="space-y-2">
                 {items.map((l1) => {
-                  if (!l1.isMegaMenu || !l1.sections || l1.sections.length === 0) {
+                  if (!hasChildren(l1)) {
                     return (
-                      <div key={l1.id} className="py-2">
+                      <div key={l1.id} className="py-2 border-b border-slate-100">
                         <a
                           href={l1.href || '#'}
                           className="text-sm font-bold text-slate-900 hover:text-blue-700"
                         >
-                          {l1.title}
+                          {l1.label}
                         </a>
                       </div>
                     );
@@ -111,37 +113,51 @@ export function MobileDrawer({
                     >
                       <Accordion.Header>
                         <Accordion.Trigger className="w-full flex items-center justify-between py-2 text-sm font-bold text-slate-900 hover:text-blue-700 focus:outline-none">
-                          <span>{l1.title}</span>
+                          <span>{l1.label}</span>
                           <ChevronDown className="w-4 h-4 text-slate-400 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
                         </Accordion.Trigger>
                       </Accordion.Header>
 
                       <Accordion.Content className="pt-2 pl-2 space-y-4">
-                        {l1.sections.map((l2) => (
-                          <div key={l2.id} className="space-y-2">
-                            <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">
-                              {l2.sectionTitle}
-                            </p>
-                            <ul className="space-y-1 list-none p-0 m-0 pl-2">
-                              {l2.items.map((l3) => (
-                                <li key={l3.id}>
-                                  <a
-                                    href={l3.href}
-                                    data-analytics={l3.analyticsTag}
-                                    className="flex items-center justify-between py-1 text-xs text-slate-700 hover:text-blue-700"
-                                  >
-                                    <span>{l3.title}</span>
-                                    {l3.badge && (
-                                      <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-blue-100 text-blue-800 rounded">
-                                        {l3.badge}
-                                      </span>
-                                    )}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
+                        {(l1.navItems || []).map((l2) => {
+                          if (!hasChildren(l2)) {
+                            return (
+                              <a
+                                key={l2.id}
+                                href={l2.href || '#'}
+                                className="block py-1 text-xs font-semibold text-slate-700 hover:text-blue-700"
+                              >
+                                {l2.label}
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <div key={l2.id} className="space-y-2">
+                              <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+                                {l2.label}
+                              </p>
+                              <ul className="space-y-1 list-none p-0 m-0 pl-2">
+                                {(l2.navItems || []).map((l3) => (
+                                  <li key={l3.id}>
+                                    <a
+                                      href={l3.href || '#'}
+                                      data-analytics={l3.analyticsTag}
+                                      className="flex items-center justify-between py-1 text-xs text-slate-700 hover:text-blue-700"
+                                    >
+                                      <span>{l3.label}</span>
+                                      {l3.badge && (
+                                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-blue-100 text-blue-800 rounded">
+                                          {l3.badge}
+                                        </span>
+                                      )}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
 
                         {l1.promoCard && (
                           <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">

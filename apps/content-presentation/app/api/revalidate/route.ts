@@ -26,12 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invalid or missing secret' }, { status: 401 });
     }
 
-    const { experience, locale, channel } = body;
+    const { experience, locale, channel, menuType = 'global' } = body;
 
     // 1. Tag-based invalidation with cacheLife profile
     revalidateTag('navigation', 'max');
     if (experience && locale) {
-      revalidateTag(`nav-${experience}-${locale}`, 'max');
+      revalidateTag(`nav-${experience}-${menuType}-${locale}`, 'max');
+      revalidateTag(`nav-${experience}-utility-${locale}`, 'max');
+      revalidateTag(`nav-${experience}-section-${locale}`, 'max');
     }
 
     // 2. Path-based invalidation for edge-cached remote component

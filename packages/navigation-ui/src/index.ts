@@ -1,4 +1,5 @@
 export * from './HeaderNavigation';
+export * from './SectionNavigation';
 export * from './UtilityBar';
 export * from './MegaMenu';
 export * from './MobileDrawer';

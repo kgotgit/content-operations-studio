@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import {
   EXPERIENCES,
   LOCALES,
-  ExperienceType,
-  SupportedLocale,
+  type ExperienceType,
+  type SupportedLocale,
   isSupportedExperience,
   isSupportedLocale,
 } from '@content-ops/navigation-contract';
@@ -34,18 +34,27 @@ export default async function ExperienceLayout({
     notFound();
   }
 
-  // Server-side render navigation via Sanity Fetch SDK with ISR caching
-  const navData = await getNavigationData({
-    channel: 'web',
-    experience,
-    locale,
-  });
+  // Server-side render Global Header (L1 -> L3) + Per-Experience Utilities Menu in parallel
+  const [navData, utilitiesMenu] = await Promise.all([
+    getNavigationData({
+      channel: 'web',
+      experience,
+      menuType: 'global',
+      locale,
+    }),
+    getNavigationData({
+      channel: 'web',
+      experience,
+      menuType: 'utility',
+      locale,
+    }),
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Centered, Left-to-Right Header Navigation */}
       <HeaderNavigation
         data={navData}
+        utilitiesMenu={utilitiesMenu}
         currentExperience={experience as ExperienceType}
         currentLocale={locale as SupportedLocale}
         currentChannel="web"
@@ -59,13 +68,15 @@ export default async function ExperienceLayout({
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-xs space-y-4">
           <p className="font-semibold text-slate-300">
-            Enterprise Decoupled Architecture Demo &bull; Next.js 16 + React 19 + Sanity Studio + Vercel Remote Components
+            Apex Decoupled Content Operations &bull; Next.js 16 + React 19 + Sanity Studio + Vercel Remote Components
           </p>
           <p>
-            Brokerage and investment products are offered by modern headless services. Not FDIC insured. No bank guarantee. May lose value.
+            Brokerage and investment products are offered by Apex Financial Services. Not FDIC insured. No bank guarantee. May lose value.
           </p>
           <p className="text-slate-500">
-            Active Experience: <span className="text-slate-300 font-medium">{experience}</span> | Active Locale: <span className="text-slate-300 font-medium">{locale}</span>
+            Active Experience: <span className="text-slate-300 font-medium">{experience}</span> | Menu Type:{' '}
+            <span className="text-slate-300 font-medium">{navData.menuType}</span> | Active Locale:{' '}
+            <span className="text-slate-300 font-medium">{locale}</span>
           </p>
         </div>
       </footer>

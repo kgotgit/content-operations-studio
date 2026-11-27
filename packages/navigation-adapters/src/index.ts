@@ -1,20 +1,27 @@
 import {
+  DEFAULT_LOCALE,
   EXPERIENCES,
+  EXPERIENCE_METADATA,
   LOCALES,
   LOCALE_METADATA,
-  type ExperienceType,
-  type SupportedLocale,
-  type NavigationDocument,
+  isNavBranch,
+  resolveTargetHref,
   type ExperienceOption,
+  type ExperienceType,
   type LocaleOption,
+  type NavItem,
+  type NavigationDocument,
+  type SupportedLocale,
 } from '@content-ops/navigation-contract';
 
 declare const process: any;
 
 export interface DomainConfig {
-  general: string;
-  retirement: string;
-  advisorservices: string;
+  retail: string;
+  advisorServices: string;
+  wealthManagement: string;
+  retirementServices: string;
+  workPlaceServices: string;
 }
 
 function getEnv(key: string, fallback: string): string {
@@ -25,70 +32,101 @@ function getEnv(key: string, fallback: string): string {
 }
 
 export const DEFAULT_DOMAINS: DomainConfig = {
-  general: getEnv('NEXT_PUBLIC_GENERAL_DOMAIN', 'https://www.company.com'),
-  retirement: getEnv('NEXT_PUBLIC_RETIREMENT_DOMAIN', 'https://workplace.company.com'),
-  advisorservices: getEnv('NEXT_PUBLIC_ADVISOR_DOMAIN', 'https://advisorservices.company.com'),
+  retail: getEnv('NEXT_PUBLIC_RETAIL_DOMAIN', getEnv('NEXT_PUBLIC_GENERAL_DOMAIN', 'https://www.apex.example.com')),
+  advisorServices: getEnv('NEXT_PUBLIC_ADVISOR_DOMAIN', 'https://advisorservices.apex.example.com'),
+  wealthManagement: getEnv('NEXT_PUBLIC_WEALTH_DOMAIN', 'https://wealth.apex.example.com'),
+  retirementServices: getEnv('NEXT_PUBLIC_RETIREMENT_DOMAIN', 'https://retirement.apex.example.com'),
+  workPlaceServices: getEnv('NEXT_PUBLIC_WORKPLACE_DOMAIN', 'https://workplace.apex.example.com'),
 };
 
 /**
+ * Applies the locale prefix ("/es/...", "/zh-hant/...") to relative paths when locale !== en-US.
+ */
+export function localizeRelativeHref(href: string, locale: SupportedLocale = DEFAULT_LOCALE): string {
+  if (!href || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+    return href;
+  }
+  const normalized = href.startsWith('/') ? href : `/${href}`;
+  if (locale === DEFAULT_LOCALE) return normalized;
+
+  const prefix = `/${locale.toLowerCase()}`;
+  if (normalized.toLowerCase().startsWith(`${prefix}/`) || normalized.toLowerCase() === prefix) {
+    return normalized;
+  }
+  return `${prefix}${normalized}`;
+}
+
+/**
  * Resolves a relative URL against an experience domain when rendering inside
- * a remote component or foreign host (like legacy Drupal).
+ * a remote component or foreign host (like a legacy CMS).
  */
 export function resolveHref(
   href: string,
   experience: ExperienceType,
   domains: DomainConfig = DEFAULT_DOMAINS,
   isRemote = false,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): string {
   if (!href) return '#';
   if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
     return href;
   }
 
-  // If in remote mode (Drupal), always prefix with the appropriate micro-frontend domain
+  const localized = localizeRelativeHref(href, locale);
+
   if (isRemote) {
-    const base = domains[experience] || domains.general;
+    const base = domains[experience] || domains.retail;
     const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
-    const cleanHref = href.startsWith('/') ? href : `/${href}`;
-    return `${cleanBase}${cleanHref}`;
+    return `${cleanBase}${localized}`;
   }
 
-  return href;
+  return localized;
+}
+
+function resolveNavItemsRecursive(
+  items: NavItem[],
+  experience: ExperienceType,
+  locale: SupportedLocale,
+  domains: DomainConfig,
+  isRemote: boolean,
+): NavItem[] {
+  return items.map((item) => {
+    const branchNode = isNavBranch(item);
+    const rawHref = branchNode ? undefined : item.href || resolveTargetHref(item.target, locale);
+
+    return {
+      ...item,
+      href: rawHref ? resolveHref(rawHref, experience, domains, isRemote, locale) : undefined,
+      promoCard: item.promoCard
+        ? {
+            ...item.promoCard,
+            ctaUrl: resolveHref(item.promoCard.ctaUrl, experience, domains, isRemote, locale),
+          }
+        : undefined,
+      navItems: branchNode
+        ? resolveNavItemsRecursive(item.navItems!, experience, locale, domains, isRemote)
+        : undefined,
+    };
+  });
 }
 
 /**
- * Traverses a NavigationDocument and normalizes all URLs according to the runtime context.
+ * Traverses a NavigationDocument and normalizes all URLs according to locale & runtime context.
  */
 export function resolveNavigationUrls(
   doc: NavigationDocument,
   options: { isRemote?: boolean; domains?: DomainConfig } = {},
 ): NavigationDocument {
   const { isRemote = false, domains = DEFAULT_DOMAINS } = options;
+  const locale = doc.locale || DEFAULT_LOCALE;
 
   return {
     ...doc,
     utilityLinks: doc.utilityLinks.map((link) => ({
       ...link,
-      href: resolveHref(link.href, doc.experience, domains, isRemote),
+      href: resolveHref(link.href, doc.experience, domains, isRemote, locale),
     })),
-    items: doc.items.map((item) => ({
-      ...item,
-      href: item.href ? resolveHref(item.href, doc.experience, domains, isRemote) : undefined,
-      sections: item.sections?.map((section) => ({
-        ...section,
-        href: section.href ? resolveHref(section.href, doc.experience, domains, isRemote) : undefined,
-        items: section.items.map((subItem) => ({
-          ...subItem,
-          href: resolveHref(subItem.href, doc.experience, domains, isRemote),
-        })),
-      })),
-      promoCard: item.promoCard
-        ? {
-            ...item.promoCard,
-            ctaUrl: resolveHref(item.promoCard.ctaUrl, doc.experience, domains, isRemote),
-          }
-        : undefined,
-    })),
+    navItems: resolveNavItemsRecursive(doc.navItems, doc.experience, locale, domains, isRemote),
   };
 }
 
@@ -102,17 +140,11 @@ export function withExperienceAndLocaleOptions(
   domains: DomainConfig = DEFAULT_DOMAINS,
   isRemote = false,
 ): NavigationDocument {
-  const experienceTitles: Record<ExperienceType, string> = {
-    general: 'Personal / Investing',
-    retirement: 'Workplace & Retirement',
-    advisorservices: 'Advisor Services',
-  };
-
   const experienceSwitcherLinks: ExperienceOption[] = EXPERIENCES.map((exp) => ({
     id: exp,
-    title: experienceTitles[exp],
+    title: EXPERIENCE_METADATA[exp].shortLabel,
     href: isRemote
-      ? `${domains[exp] || domains.general}/${currentLocale}/${exp}`
+      ? `${domains[exp] || domains.retail}/${currentLocale}/${exp}`
       : `/${currentLocale}/${exp}`,
     current: exp === currentExperience,
   }));
@@ -132,38 +164,44 @@ export function withExperienceAndLocaleOptions(
 }
 
 /**
- * Agentic Bot Transformer: Extracts a flat intent-route structure with descriptions
+ * Agentic Bot Transformer: Recursively extracts flat intent-route leaves with breadcrumb paths
  * suitable for LLMs and function-calling search / navigation tools.
  */
 export function toAgenticBotContext(doc: NavigationDocument) {
   const intents: Array<{
-    category: string;
-    section: string;
+    path: string[];
     action: string;
     url: string;
     description: string;
     badge?: string;
+    targetId?: string;
   }> = [];
 
-  for (const l1 of doc.items) {
-    if (l1.sections) {
-      for (const l2 of l1.sections) {
-        for (const l3 of l2.items) {
-          intents.push({
-            category: l1.title,
-            section: l2.sectionTitle,
-            action: l3.title,
-            url: l3.href,
-            description: l3.description || `${l3.title} under ${l2.sectionTitle}`,
-            badge: l3.badge,
-          });
-        }
+  const walk = (items: NavItem[], trail: string[]) => {
+    for (const item of items) {
+      if (isNavBranch(item)) {
+        walk(item.navItems!, [...trail, item.label]);
+      } else {
+        intents.push({
+          path: trail,
+          action: item.label,
+          url: item.href || resolveTargetHref(item.target, doc.locale) || '#',
+          description:
+            item.description ||
+            item.target?.description ||
+            `${item.label}${trail.length ? ` under ${trail.join(' > ')}` : ''}`,
+          badge: item.badge,
+          targetId: item.target?._id,
+        });
       }
     }
-  }
+  };
+
+  walk(doc.navItems, []);
 
   return {
     experience: doc.experience,
+    menuType: doc.menuType,
     channel: doc.channel,
     locale: doc.locale,
     totalIntents: intents.length,
@@ -175,22 +213,21 @@ export function toAgenticBotContext(doc: NavigationDocument) {
  * Mobile-optimized payload omitting heavy desktop promo cards.
  */
 export function toMobilePayload(doc: NavigationDocument) {
+  const strip = (items: NavItem[]): Array<Record<string, unknown>> =>
+    items.map((item) => ({
+      id: item.id,
+      label: item.label,
+      ...(item.href ? { href: item.href } : {}),
+      ...(item.badge ? { badge: item.badge } : {}),
+      ...(isNavBranch(item) ? { navItems: strip(item.navItems!) } : {}),
+    }));
+
   return {
     experience: doc.experience,
+    menuType: doc.menuType,
     locale: doc.locale,
     channel: 'mobile',
     utility: doc.utilityLinks,
-    tree: doc.items.map((l1) => ({
-      title: l1.title,
-      href: l1.href,
-      sections: l1.sections?.map((l2) => ({
-        title: l2.sectionTitle,
-        items: l2.items.map((l3) => ({
-          title: l3.title,
-          href: l3.href,
-          badge: l3.badge,
-        })),
-      })),
-    })),
+    tree: strip(doc.navItems),
   };
 }
