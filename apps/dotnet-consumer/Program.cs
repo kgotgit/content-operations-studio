@@ -44,7 +44,7 @@ builder.Services.AddHttpClient("RemoteNav", client =>
 var app = builder.Build();
 
 var supportedChannels = new HashSet<string>(StringComparer.Ordinal) { "web", "mobile", "email", "agentic" };
-var supportedExperiences = new HashSet<string>(StringComparer.Ordinal) { "general", "retirement", "advisorservices" };
+var supportedExperiences = new HashSet<string>(StringComparer.Ordinal) { "retail", "advisorServices", "wealthManagement", "retirementServices", "workPlaceServices" };
 var supportedLocales = new[] { "en-US", "en-HK", "en-SG", "es", "zh-Hant", "zh-Hans" };
 var supportedLocaleSet = new HashSet<string>(supportedLocales, StringComparer.Ordinal);
 
@@ -59,7 +59,7 @@ app.MapGet("/health", () => Results.Ok(new
 }));
 
 app.MapGet("/", (HttpContext ctx, IHttpClientFactory httpFactory, IMemoryCache cache) =>
-    HandlePageAsync(ctx, "web", "general", "en-US", httpFactory, cache));
+    HandlePageAsync(ctx, "web", "retail", "en-US", httpFactory, cache));
 
 app.MapGet("/{experience}/{locale}", (
     string experience,
@@ -170,11 +170,13 @@ async Task<IResult> HandlePageAsync(
 
     var quickLinks = new (string Label, string Href)[]
     {
-        ("General (en-US)", "/general/en-US"),
-        ("General (zh-Hant)", "/general/zh-Hant"),
-        ("General (es)", "/general/es"),
-        ("Workplace Retirement (en-US)", "/retirement/en-US"),
-        ("Advisor Services (en-US)", "/advisorservices/en-US"),
+        ("Retail (en-US)", "/retail/en-US"),
+        ("Retail (zh-Hant)", "/retail/zh-Hant"),
+        ("Retail (es)", "/retail/es"),
+        ("Advisor Services (en-US)", "/advisorServices/en-US"),
+        ("Wealth Management (en-US)", "/wealthManagement/en-US"),
+        ("Retirement Services (en-US)", "/retirementServices/en-US"),
+        ("Workplace Services (en-US)", "/workPlaceServices/en-US"),
     };
 
     var switcherHtml = new StringBuilder();

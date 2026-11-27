@@ -290,6 +290,27 @@ export function resolveTargetHref(
   return `${prefix}${normalized}`;
 }
 
+const LEGACY_EXPERIENCE_ALIASES: Record<string, ExperienceType> = {
+  general: 'retail',
+  retail: 'retail',
+  retirement: 'retirementServices',
+  retirementservices: 'retirementServices',
+  advisorservices: 'advisorServices',
+  wealthmanagement: 'wealthManagement',
+  workplaceservices: 'workPlaceServices',
+};
+
+/**
+ * Resolves a canonical ExperienceType from either the exact slug or a legacy/lowercase alias
+ * (e.g. "general" -> "retail", "advisorservices" -> "advisorServices", "retirement" -> "retirementServices").
+ */
+export function normalizeExperience(val: string): ExperienceType | null {
+  if (EXPERIENCES.includes(val as ExperienceType)) {
+    return val as ExperienceType;
+  }
+  return LEGACY_EXPERIENCE_ALIASES[val.toLowerCase()] ?? null;
+}
+
 export function isSupportedExperience(val: string): val is ExperienceType {
   return EXPERIENCES.includes(val as ExperienceType);
 }

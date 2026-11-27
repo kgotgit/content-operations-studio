@@ -8,8 +8,8 @@ import {
   ExperienceType,
   SupportedLocale,
   isSupportedChannel,
-  isSupportedExperience,
   isSupportedLocale,
+  normalizeExperience,
 } from '@content-ops/navigation-contract';
 import { getNavigationData } from '@content-ops/navigation-sanity';
 import { HeaderNavigation } from '@content-ops/navigation-ui';
@@ -48,11 +48,12 @@ export default async function RemoteNavigationPage({
 }: {
   params: Promise<{ channel: string; experience: string; locale: string }>;
 }) {
-  const { channel, experience, locale } = await params;
+  const { channel, experience: rawExperience, locale } = await params;
+  const experience = normalizeExperience(rawExperience);
 
   if (
     !isSupportedChannel(channel) ||
-    !isSupportedExperience(experience) ||
+    !experience ||
     !isSupportedLocale(locale)
   ) {
     notFound();

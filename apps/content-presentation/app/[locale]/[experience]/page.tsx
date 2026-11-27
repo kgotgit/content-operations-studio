@@ -2,6 +2,7 @@ import React from 'react';
 import {
   EXPERIENCE_METADATA,
   LOCALE_METADATA,
+  normalizeExperience,
   resolveTargetHref,
   type ExperienceType,
   type SupportedLocale,
@@ -20,7 +21,8 @@ export default async function ExperiencePage({
 }: {
   params: Promise<{ locale: string; experience: string }>;
 }) {
-  const { locale, experience } = await params;
+  const { locale, experience: rawExperience } = await params;
+  const experience = normalizeExperience(rawExperience) ?? 'retail';
   const typedExp = experience as ExperienceType;
   const typedLocale = locale as SupportedLocale;
 

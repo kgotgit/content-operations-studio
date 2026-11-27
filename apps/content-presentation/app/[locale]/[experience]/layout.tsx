@@ -5,8 +5,8 @@ import {
   LOCALES,
   type ExperienceType,
   type SupportedLocale,
-  isSupportedExperience,
   isSupportedLocale,
+  normalizeExperience,
 } from '@content-ops/navigation-contract';
 import { getNavigationData } from '@content-ops/navigation-sanity';
 import { HeaderNavigation } from '@content-ops/navigation-ui';
@@ -28,9 +28,10 @@ export default async function ExperienceLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string; experience: string }>;
 }) {
-  const { locale, experience } = await params;
+  const { locale, experience: rawExperience } = await params;
+  const experience = normalizeExperience(rawExperience);
 
-  if (!isSupportedLocale(locale) || !isSupportedExperience(experience)) {
+  if (!isSupportedLocale(locale) || !experience) {
     notFound();
   }
 

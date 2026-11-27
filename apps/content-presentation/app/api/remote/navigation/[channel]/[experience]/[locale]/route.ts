@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   isSupportedChannel,
-  isSupportedExperience,
   isSupportedLocale,
+  normalizeExperience,
 } from '@content-ops/navigation-contract';
 import {
   extractSsrMarkup,
@@ -44,15 +44,16 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ channel: string; experience: string; locale: string }> },
 ) {
-  const { channel, experience, locale } = await params;
+  const { channel, experience: rawExperience, locale } = await params;
+  const experience = normalizeExperience(rawExperience);
 
   if (
     !isSupportedChannel(channel) ||
-    !isSupportedExperience(experience) ||
+    !experience ||
     !isSupportedLocale(locale)
   ) {
     return NextResponse.json(
-      { error: 'Unsupported channel, experience, or locale', channel, experience, locale },
+      { error: 'Unsupported channel, experience, or locale', channel, experience: rawExperience, locale },
       { status: 404 },
     );
   }

@@ -18,7 +18,7 @@ declare(strict_types=1);
  */
 
 const SUPPORTED_CHANNELS = ['web', 'mobile', 'email', 'agentic'];
-const SUPPORTED_EXPERIENCES = ['general', 'retirement', 'advisorservices'];
+const SUPPORTED_EXPERIENCES = ['retail', 'advisorServices', 'wealthManagement', 'retirementServices', 'workPlaceServices'];
 const SUPPORTED_LOCALES = ['en-US', 'en-HK', 'en-SG', 'es', 'zh-Hant', 'zh-Hans'];
 
 function env_str(string $key, string $default = ''): string {
@@ -40,7 +40,7 @@ function h(string $value): string {
  */
 function resolve_route(): array {
     $channel = env_str('DEFAULT_CHANNEL', 'web');
-    $experience = env_str('DEFAULT_EXPERIENCE', 'general');
+    $experience = env_str('DEFAULT_EXPERIENCE', 'retail');
     $locale = env_str('DEFAULT_LOCALE', 'en-US');
 
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -158,7 +158,7 @@ if (
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
     echo "Unsupported route. Expected /{experience}/{locale} or /{channel}/{experience}/{locale}.\n";
-    echo "Example: /general/en-US, /general/zh-Hant, /retirement/en-US\n";
+    echo "Example: /retail/en-US, /retail/zh-Hant, /advisorServices/en-US\n";
     exit;
 }
 
@@ -195,11 +195,13 @@ header("Content-Language: {$locale}");
 header('Cache-Control: public, s-maxage=300, stale-while-revalidate=3600');
 
 $quickLinks = [
-    ['label' => 'General (en-US)', 'href' => '/general/en-US'],
-    ['label' => 'General (zh-Hant)', 'href' => '/general/zh-Hant'],
-    ['label' => 'General (es)', 'href' => '/general/es'],
-    ['label' => 'Workplace Retirement (en-US)', 'href' => '/retirement/en-US'],
-    ['label' => 'Advisor Services (en-US)', 'href' => '/advisorservices/en-US'],
+    ['label' => 'Retail (en-US)', 'href' => '/retail/en-US'],
+    ['label' => 'Retail (zh-Hant)', 'href' => '/retail/zh-Hant'],
+    ['label' => 'Retail (es)', 'href' => '/retail/es'],
+    ['label' => 'Advisor Services (en-US)', 'href' => '/advisorServices/en-US'],
+    ['label' => 'Wealth Management (en-US)', 'href' => '/wealthManagement/en-US'],
+    ['label' => 'Retirement Services (en-US)', 'href' => '/retirementServices/en-US'],
+    ['label' => 'Workplace Services (en-US)', 'href' => '/workPlaceServices/en-US'],
 ];
 ?>
 <!DOCTYPE html>
