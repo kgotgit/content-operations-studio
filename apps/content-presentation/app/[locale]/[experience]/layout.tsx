@@ -11,6 +11,8 @@ import {
 import { getNavigationData } from '@content-ops/navigation-sanity';
 import { HeaderNavigation } from '@content-ops/navigation-ui';
 
+export const instant = false;
+
 export async function generateStaticParams() {
   const params: Array<{ locale: string; experience: string }> = [];
   for (const locale of LOCALES) {

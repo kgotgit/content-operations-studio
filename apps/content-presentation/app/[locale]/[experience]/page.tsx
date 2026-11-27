@@ -16,6 +16,8 @@ import {
 import { SectionNavigation } from '@content-ops/navigation-ui';
 import { ArrowRight, CheckCircle, Globe, Layers, Link2, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
 
+export const instant = false;
+
 export default async function ExperiencePage({
   params,
 }: {

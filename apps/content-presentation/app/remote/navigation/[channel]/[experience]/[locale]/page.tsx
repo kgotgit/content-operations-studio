@@ -20,6 +20,8 @@ import type { Metadata } from 'next';
  * These routes are fragments consumed by hosts (Next.js, Drupal), not pages for search.
  * `follow` keeps link discovery; `noindex` keeps the bare fragment out of results.
  */
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Header navigation fragment',
   robots: { index: false, follow: true },
